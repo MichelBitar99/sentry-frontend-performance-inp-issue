@@ -1,0 +1,44 @@
+:root {
+  --text: #14202d;
+  --text-muted: #5b6977;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --border: #d5dde7;
+  --brand: #0e7490;
+  --brand-soft: #dff3f8;
+  --focus: #155e75;
+
+  --sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+  font: 16px/1.5 var(--sans);
+  color: var(--text);
+  background-color: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+  text-align: center;
+}
+
+body {
+  margin: 0;
+}
+
+h1 {
+  font-size: 2.1rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h2 {
+  font-size: 1.2rem;
+  line-height: 1.3;
+}
+
+p {
+  margin: 0;
+}
