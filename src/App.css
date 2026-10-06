@@ -101,6 +101,80 @@ button:focus-visible {
   margin: 0 0 8px;
 }
 
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+button.tab {
+  background: transparent;
+  color: var(--text-muted);
+}
+
+button.tab.active {
+  background: var(--brand);
+  color: #ffffff;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hospital-sim {
+  text-align: left;
+}
+
+.sim-card {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.sim-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.sim-table th,
+.sim-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.sim-table input,
+.inline-field input {
+  width: 100%;
+  min-width: 70px;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+}
+
+.inline-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.sim-log {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;

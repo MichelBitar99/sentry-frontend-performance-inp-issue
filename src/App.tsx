@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import * as Sentry from '@sentry/react'
 import './App.css'
+import HospitalSimulation from './HospitalSimulation'
+
+type Tab = 'inp' | 'hospital'
 
 type Scenario = {
   id: 'fast' | 'medium' | 'slow'
@@ -42,6 +45,7 @@ function blockMainThread(delayMs: number) {
 }
 
 function App() {
+  const [activeTab, setActiveTab] = useState<Tab>('inp')
   const [openModalId, setOpenModalId] = useState<Scenario['id'] | null>(null)
   const [interactionCount, setInteractionCount] = useState(0)
   const [lastInteraction, setLastInteraction] = useState('No interactions yet')
@@ -133,6 +137,33 @@ function App() {
         </p>
       </section>
 
+      <nav className="tabs" role="tablist" aria-label="Demo sections">
+        <button
+          type="button"
+          role="tab"
+          id="tab-inp"
+          aria-selected={activeTab === 'inp'}
+          className={activeTab === 'inp' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('inp')}
+        >
+          INP Scenarios
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-hospital"
+          aria-selected={activeTab === 'hospital'}
+          className={activeTab === 'hospital' ? 'tab active' : 'tab'}
+          onClick={() => setActiveTab('hospital')}
+        >
+          Hospital Simulation
+        </button>
+      </nav>
+
+      {activeTab === 'hospital' && <HospitalSimulation />}
+
+      {activeTab === 'inp' && (
+      <>
       <section className="grid" aria-label="INP scenarios">
         {scenarios.map((scenario) => (
           <article className="card" key={scenario.id}>
@@ -175,6 +206,8 @@ function App() {
           Throw Test Error
         </button>
       </section>
+      </>
+      )}
 
       {activeScenario && (
         <div className="overlay" role="presentation" onClick={() => closeModal(activeScenario)}>
@@ -210,12 +243,3 @@ function App() {
 }
 
 export default App
-
-// AUTOMATIC ID INJECTION
-// Option 1: Vite Plugin (Compile-Time, Full Auto)
-// Automatically injects IDs into all interactive elements at build time
-// File: vite-plugin-auto-id.ts
-// Already configured in vite.config.ts
-// Requires: yarn add --dev @babel/core @babel/preset-react @babel/preset-typescript @babel/traverse @babel/types
-// Best for: Large apps, zero manual work, existing code
-

@@ -28,9 +28,10 @@ const replaysOnErrorSampleRate = parseSampleRate(
 )
 
 if (dsn) {
+  Sentry.setUser({ username: 'michel-2' })
   Sentry.init({
     dsn,
-    environment: import.meta.env.MODE,
+    environment: "devvv",
     integrations: [
       Sentry.browserTracingIntegration({
         enableInp: true,
