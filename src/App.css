@@ -166,6 +166,11 @@ button:disabled {
   font-size: 14px;
 }
 
+.sim-subtitle {
+  margin: 18px 0 0;
+  font-size: 16px;
+}
+
 .sim-log {
   margin: 8px 0 0;
   padding-left: 18px;

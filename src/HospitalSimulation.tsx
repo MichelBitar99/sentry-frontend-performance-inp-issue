@@ -18,7 +18,16 @@ import * as Sentry from '@sentry/react'
  */
 
 const DURATION_OP = 'hospital.simulated.load'
-const DURATION_TXN = 'Hospital Simulation - Load'
+/** Suggested screen/transaction names (free text is also allowed). */
+const SCREEN_TRANSACTIONS = [
+  '/dashboard',
+  '/patients',
+  '/patients/:patientId',
+  '/patients/:patientId/orders',
+  '/patients/:patientId/medications',
+  '/schedule',
+  '/reports',
+]
 const INP_OP = 'hospital.simulated.inp'
 const INP_TXN = 'Hospital Simulation - INP'
 
@@ -28,6 +37,7 @@ const SEND_INTERVAL_MS = 40
 type DurationRow = {
   hospital: string
   bucketSize: string
+  transaction: string
   avgMs: number
   samples: number
 }
@@ -39,11 +49,53 @@ type InpRow = {
   samples: number
 }
 
+/**
+ * Per-screen rows. Sample counts are equal within each hospital + bucket group
+ * and averages are symmetric, so the rolled-up AVG still matches the target:
+ *   CCF - Avon / 101-500              -> 1.7s
+ *   Metrohealth Main Campus / 101-500 -> 1.2s
+ *   Metrohealth Main Campus / 1-50    -> 900ms
+ */
 const defaultDurationRows: DurationRow[] = [
-  { hospital: 'CCF - Avon', bucketSize: '101-500', avgMs: 1700, samples: 20 },
-  { hospital: 'Metrohealth Main Campus', bucketSize: '101-500', avgMs: 1200, samples: 20 },
-  { hospital: 'Metrohealth Main Campus', bucketSize: '1-50', avgMs: 900, samples: 20 },
+  { hospital: 'CCF - Avon', bucketSize: '101-500', transaction: '/patients', avgMs: 2100, samples: 20 },
+  { hospital: 'CCF - Avon', bucketSize: '101-500', transaction: '/patients/:patientId', avgMs: 1700, samples: 20 },
+  { hospital: 'CCF - Avon', bucketSize: '101-500', transaction: '/dashboard', avgMs: 1300, samples: 20 },
+  { hospital: 'Metrohealth Main Campus', bucketSize: '101-500', transaction: '/patients', avgMs: 1500, samples: 20 },
+  { hospital: 'Metrohealth Main Campus', bucketSize: '101-500', transaction: '/schedule', avgMs: 900, samples: 20 },
+  { hospital: 'Metrohealth Main Campus', bucketSize: '1-50', transaction: '/patients/:patientId/orders', avgMs: 1000, samples: 20 },
+  { hospital: 'Metrohealth Main Campus', bucketSize: '1-50', transaction: '/dashboard', avgMs: 800, samples: 20 },
 ]
+
+type RollupRow = { hospital: string; bucketSize: string; avgMs: number; samples: number; screens: number }
+
+/** Expected weighted AVG per hospital + bucket_size (what the dashboard should show). */
+function computeRollup(rows: DurationRow[]): RollupRow[] {
+  const groups = new Map<
+    string,
+    { hospital: string; bucketSize: string; total: number; samples: number; screens: Set<string> }
+  >()
+  for (const row of rows) {
+    const key = `${row.hospital}|${row.bucketSize}`
+    const group = groups.get(key) ?? {
+      hospital: row.hospital,
+      bucketSize: row.bucketSize,
+      total: 0,
+      samples: 0,
+      screens: new Set<string>(),
+    }
+    group.total += row.avgMs * row.samples
+    group.samples += row.samples
+    group.screens.add(row.transaction)
+    groups.set(key, group)
+  }
+  return [...groups.values()].map((g) => ({
+    hospital: g.hospital,
+    bucketSize: g.bucketSize,
+    avgMs: g.samples ? Math.round(g.total / g.samples) : 0,
+    samples: g.samples,
+    screens: g.screens.size,
+  }))
+}
 
 const defaultInpRows: InpRow[] = [
   { hospital: 'CCF - Avon', diffMs: 1700, baseMs: 200, samples: 100 },
@@ -174,7 +226,7 @@ function HospitalSimulation() {
     durationRows.flatMap((row) =>
       buildDurations(row.avgMs, row.samples, jitterPct).map((durationMs) => () =>
         emitTransaction({
-          name: DURATION_TXN,
+          name: row.transaction.trim() || '/unknown',
           op: DURATION_OP,
           durationMs,
           tags: {
@@ -219,15 +271,21 @@ function HospitalSimulation() {
       <article className="card sim-card">
         <h2>Table 1 - AVG transaction duration</h2>
         <p className="meta">
-          op: <code>{DURATION_OP}</code> · transaction: <code>{DURATION_TXN}</code> · group by{' '}
-          <code>hospital</code>, <code>bucket_size</code> · Y-axis{' '}
-          <code>avg(transaction.duration)</code>
+          op: <code>{DURATION_OP}</code> · transaction: per row (screen) · group by{' '}
+          <code>hospital</code>, <code>bucket_size</code> (optionally <code>transaction</code>) ·
+          Y-axis <code>avg(transaction.duration)</code>
         </p>
+        <datalist id="screen-transactions">
+          {SCREEN_TRANSACTIONS.map((txn) => (
+            <option key={txn} value={txn} />
+          ))}
+        </datalist>
         <table className="sim-table">
           <thead>
             <tr>
               <th>Hospital</th>
               <th>Bucket Size</th>
+              <th>Transaction (screen)</th>
               <th>AVG Duration (ms)</th>
               <th>Samples</th>
               <th>Expected</th>
@@ -247,6 +305,14 @@ function HospitalSimulation() {
                   <input
                     value={row.bucketSize}
                     onChange={(e) => updateDurationRow(index, { bucketSize: e.target.value })}
+                  />
+                </td>
+                <td>
+                  <input
+                    list="screen-transactions"
+                    placeholder="/your/route"
+                    value={row.transaction}
+                    onChange={(e) => updateDurationRow(index, { transaction: e.target.value })}
                   />
                 </td>
                 <td>
@@ -298,7 +364,7 @@ function HospitalSimulation() {
             onClick={() =>
               setDurationRows((rows) => [
                 ...rows,
-                { hospital: 'New Hospital', bucketSize: '1-50', avgMs: 1000, samples: 20 },
+                { hospital: 'New Hospital', bucketSize: '1-50', transaction: '/patients', avgMs: 1000, samples: 20 },
               ])
             }
           >
@@ -316,6 +382,32 @@ function HospitalSimulation() {
             Send duration transactions
           </button>
         </div>
+
+        <h3 className="sim-subtitle">Expected dashboard result (grouped by hospital + bucket_size)</h3>
+        <table className="sim-table">
+          <thead>
+            <tr>
+              <th>Hospital</th>
+              <th>Bucket Size</th>
+              <th>AVG Transaction Duration</th>
+              <th>Screens</th>
+              <th>Samples</th>
+            </tr>
+          </thead>
+          <tbody>
+            {computeRollup(durationRows).map((r) => (
+              <tr key={`${r.hospital}-${r.bucketSize}`}>
+                <td>{r.hospital}</td>
+                <td>{r.bucketSize}</td>
+                <td>
+                  <strong>{formatMs(r.avgMs)}</strong>
+                </td>
+                <td>{r.screens}</td>
+                <td>{r.samples}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </article>
 
       {/* ---------------- Table 2 ---------------- */}
